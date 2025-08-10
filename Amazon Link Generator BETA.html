@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Amazon Link Generator v3</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<style>
+        :root {
+            --primary-color: #232f3e;
+            --secondary-color: #37475a;
+            --border-color: #ddd;
+            --border-radius: 8px;
+
+            /* Theme-aware variables */
+            --bg: #f7f7f7;
+            --panel-bg: #ffffff;
+            --muted-bg: #f7f7f7;
+            --muted-bg-hover: #e9ecef;
+            --text-color: #1f2937;
+            --muted-text: #6c757d;
+            --selected-row-bg: #e9ecef;
+            --badge-confident: #d4edda;
+            --badge-ambiguous: #fff3cd;
+            --invalid-row-bg: #fff3cd;
+            --accent: #0d6efd;
+            --shadow: 0 6px 18px rgba(16,24,40,0.06);
+        }
+
+
+        body {
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text-color);
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+            transition: background-color 320ms ease, color 320ms ease;
+        }
+
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            /* layout handled by compact header rules below */
+            padding: 10px 12px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .header .app-title { font-size: 18px; font-weight: 700; letter-spacing: 0.2px; }
+        .header .theme-label { font-size: 11px; opacity: 0.95; margin-right: 6px; text-transform: uppercase; }
+
+        .footer { font-size: 13px; font-weight: 500; text-align: center; padding: 10px 0; background-color: var(--primary-color); color: white; position: fixed; bottom: 0; width: 100%; opacity: 0.95; }
+
+        .container-fluid {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .store-input-group {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .store-name-input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .country-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background-color: var(--muted-bg);
+            padding: 5px 10px;
+            border-radius: var(--border-radius);
+            font-size: 14px;
+        }
+
+        .country-badge.hidden {
+            display: none;
+        }
+
+        .country-badge.confident {
+            background-color: var(--badge-confident);
+        }
+
+        .country-badge.ambiguous {
+            background-color: var(--badge-ambiguous);
+        }
+
+        .open-portal-btn {
+            height: fit-content;
+        }
+
+        .tab-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tab-help-btn {
+            margin-left: auto;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            max-height: calc(100vh - 250px);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            transition: background-color 320ms ease, border-color 320ms ease, box-shadow 320ms ease;
+        }
+
+        .input-panel h1,
+        .output-panel h1 {
+            font-size: 18px;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-spreadsheet-container {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            max-height: 300px;
+            min-height: 100px;
+        }
+
+        .input-spreadsheet {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .input-spreadsheet th,
+        .input-spreadsheet td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        .input-spreadsheet th {
+            background-color: var(--muted-bg);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .input-spreadsheet input {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-size: 12px;
+            padding: 4px;
+        }
+
+        .input-spreadsheet .action-cell {
+            text-align: center;
+        }
+
+        .action-btn {
+            padding: 2px 6px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        .invalid-row {
+            background-color: var(--badge-ambiguous);
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .results-table th,
+        .results-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+        }
+
+        .results-table th {
+            background-color: var(--muted-bg);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .results-table th[data-sort] {
+            position: relative;
+        }
+
+        .sort-arrow::after {
+            content: '';
+            margin-left: 5px;
+        }
+
+        .sort-asc .sort-arrow::after {
+            content: '↑';
+        }
+
+        .sort-desc .sort-arrow::after {
+            content: '↓';
+        }
+
+        .results-table .fixed-width {
+            width: 30px;
+            text-align: center;
+        }
+
+        .results-table .invoice-list {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .selected-row {
+            background-color: var(--muted-bg);
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-container input {
+            width: 150px;
+        }
+
+        .stats-card {
+            background-color: var(--muted-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .stats-card .row {
+            text-align: center;
+        }
+
+        .stats-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .quick-action-btn {
+            background-color: var(--muted-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .quick-action-btn:hover {
+            background-color: var(--muted-bg);
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            min-width: 200px;
+            padding: 10px 20px;
+            color: white;
+            border-radius: var(--border-radius);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast.bg-success {
+            background-color: #28a745;
+        }
+
+        .toast.bg-danger {
+            background-color: #dc3545;
+        }
+
+        .toast a {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .settings-group {
+            display: flex;
+            gap: 20px;
+            background-color: var(--muted-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 8px;
+            margin-top: 8px;
+        }
+
+        .settings-group label {
+            font-weight: 500;
+            color: var(--secondary-color);
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .settings-group select,
+        .settings-group input {
+            font-size: 12px;
+            padding: 6px 10px;
+        }
+
+        @media (max-width: 768px) {
+            .settings-group {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .settings-group select,
+            .settings-group input {
+                width: 100%;
+            }
+        }
+    
+/* Dark Mode */
+body.dark {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+body.dark .header, 
+body.dark .footer {
+    background-color: #1f1f1f;
+    color: #fff;
+}
+body.dark .panel {
+    background-color: #1f1f1f;
+    border-color: #333;
+}
+
+/* Matrix Mode */
+body.matrix {
+    background-color: #000;
+    color: #00d4ff;
+    font-family: 'Courier New', monospace;
+}
+body.matrix .header, 
+body.matrix .footer {
+    background-color: #000;
+    color: #00d4ff;
+    text-shadow: 0 0 6px #00d4ff;
+}
+body.matrix .panel {
+    background-color: #000;
+    border: 1px solid #00d4ff;
+}
+
+/* Smooth transitions for panels and small elements */
+.panel, .stats-card, .input-spreadsheet th, .results-table th, .quick-action-btn, .country-badge, .toast {
+    transition: background-color 320ms ease, color 320ms ease, border-color 320ms ease, box-shadow 320ms ease, transform 160ms ease;
+}
+
+/* Theme toggle (compact & premium) */
+.theme-toggle .btn {
+    padding: 6px 8px;
+    min-width: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    margin-left: 4px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: transparent;
+    color: inherit;
+    transition: background-color 220ms ease, color 220ms ease, transform 160ms ease, box-shadow 220ms ease;
+}
+.theme-toggle .btn i { font-size: 14px; }
+.theme-toggle .btn.active {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(2,6,23,0.12);
+    background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    color: var(--accent);
+    border-color: rgba(0,0,0,0.06);
+}
+
+/* Default look for header buttons on light header */
+.header .theme-toggle .btn {
+    color: #fff;
+    border-color: rgba(255,255,255,0.12);
+}
+
+/* Matrix subtle background animation */
+body.matrix::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: linear-gradient(0deg, rgba(0,212,255,0.025) 0px, transparent 30px);
+    background-size: 100% 30px;
+    animation: matrixShift 8s linear infinite;
+    opacity: 0.08;
+}
+@keyframes matrixShift { from { background-position: 0 0; } to { background-position: 0 30px; } }
+
+/* Theme variable overrides (dark and matrix) */
+:root[data-theme="dark"] {
+    --bg: #0b0f14;
+    --panel-bg: #0f1216;
+    --muted-bg: #0e1114;
+    --muted-bg-hover: #182026;
+    --text-color: #e6eef6;
+    --muted-text: #9aa4b2;
+    --primary-color: #1f6feb;
+    --secondary-color: #9fb7ff;
+    --border-color: #23262a;
+    --selected-row-bg: rgba(255,255,255,0.02);
+    --badge-confident: rgba(37,95,56,0.35);
+    --badge-ambiguous: rgba(110,80,10,0.15);
+    --invalid-row-bg: rgba(110,80,10,0.12);
+    --accent: #66b2ff;
+    --shadow: 0 8px 30px rgba(2,6,23,0.35);
+}
+
+:root[data-theme="matrix"] {
+    --bg: #000000;
+    --panel-bg: rgba(0,0,0,0.55);
+    --muted-bg: rgba(0,0,0,0.5);
+    --muted-bg-hover: rgba(0,30,0,0.6);
+    --text-color: #00d4ff;
+    --muted-text: #7feaff;
+    --primary-color: #00d4ff;
+    --secondary-color: #00d4ff;
+    --border-color: rgba(0,212,255,0.08);
+    --selected-row-bg: rgba(0,212,255,0.04);
+    --badge-confident: rgba(0,212,255,0.05);
+    --badge-ambiguous: rgba(0,212,255,0.04);
+    --invalid-row-bg: rgba(255,180,0,0.06);
+    --accent: #00d4ff;
+    --shadow: none;
+}
+
+/* Compact header layout tuning */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+}
+
+/* Small visual polish */
+.input-spreadsheet th, .results-table th {
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+/* Dropdown theme items styling */
+.theme-toggle .dropdown-menu { min-width: 160px; }
+.theme-item.active { background-color: rgba(0,0,0,0.05); font-weight:600; }
+.theme-label { color: rgba(255,255,255,0.9); }
+#currentThemeIcon { width: 18px; text-align: center; }
+
+</style>
+
+<script>
+// Apply saved theme early to avoid flash of unthemed UI
+(function(){
+    try {
+        var t = localStorage.getItem('theme') || 'default';
+        if (t && t !== 'default') {
+            document.documentElement.setAttribute('data-theme', t);
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    } catch(err) { /* ignore */ }
+})();
+</script>
+
+</head>
+<body>
+<div class="header d-flex justify-content-between align-items-center"><span class="app-title">Amazon Link Generator v3</span>
+<div class="d-flex align-items-center" style="margin-left:12px; gap:8px;">
+    <span class="theme-label">Theme</span>
+    <div class="dropdown theme-toggle">
+        <button class="btn btn-sm btn-outline-light dropdown-toggle d-flex align-items-center" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Theme selector" type="button">
+            <i class="fas fa-palette" id="currentThemeIcon" style="margin-right:6px;"></i>
+            <span class="visually-hidden">Current theme</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="themeDropdown">
+            <li><button class="dropdown-item theme-item d-flex align-items-center" data-theme="default" type="button"><i class="fas fa-palette me-2"></i> Default</button></li>
+            <li><button class="dropdown-item theme-item d-flex align-items-center" data-theme="dark" type="button"><i class="fas fa-moon me-2"></i> Dark</button></li>
+            <li><button class="dropdown-item theme-item d-flex align-items-center" data-theme="matrix" type="button"><i class="fas fa-terminal me-2"></i> Matrix</button></li>
+        </ul>
+    </div>
+</div>
+</div>
+<div class="container-fluid">
+<div class="tab-container">
+<ul class="nav nav-tabs" id="linkTabs" role="tablist">
+<li class="nav-item" role="presentation">
+<button aria-controls="createDispute" aria-label="Create Dispute Links Tab" aria-selected="true" class="nav-link active" data-bs-target="#createDispute" data-bs-toggle="tab" id="create-tab" role="tab" type="button">Create Dispute Links</button>
+</li>
+<li class="nav-item" role="presentation">
+<button aria-controls="disputeId" aria-label="Dispute ID Links Tab" aria-selected="false" class="nav-link" data-bs-target="#disputeId" data-bs-toggle="tab" id="dispute-tab" role="tab" type="button">Dispute ID Links</button>
+</li>
+</ul>
+<button aria-label="Open Help Modal" class="btn btn-outline-primary tab-help-btn" data-bs-target="#helpModal" data-bs-toggle="modal" type="button">
+<i class="fas fa-info-circle"></i> Help
+            </button>
+</div>
+<div class="tab-content" id="linkTabContent">
+<div aria-labelledby="create-tab" class="tab-pane fade show active" id="createDispute" role="tabpanel">
+<div class="row">
+<div class="col-md-6">
+<div class="panel input-panel">
+<h1><i class="fas fa-amazon"></i> Input Data</h1>
+<div class="settings-group mb-3">
+<div style="flex: 1;">
+<label class="form-label" for="maxCreateRows">Maximum Rows</label>
+<select aria-label="Select maximum rows" class="form-control" id="maxCreateRows">
+<option value="50">50</option>
+<option value="100">100</option>
+<option value="200">200</option>
+<option value="500">500</option>
+<option value="1000">1000</option>
+</select>
+</div>
+<div style="flex: 1;">
+<label class="form-label" for="createLinkDelay">Delay Between Links (ms)</label>
+<input aria-label="Delay between opening links in milliseconds" class="form-control" id="createLinkDelay" max="5000" min="0" type="number" value="500"/>
+<div class="invalid-feedback">Delay must be between 0 and 5000 ms</div>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label">Input Store Name, Agreement IDs, and Invoice Numbers</label>
+<div class="input-spreadsheet-container" id="createInputContainer">
+<table aria-label="Input Store Name, Agreement IDs, and Invoice Numbers" class="input-spreadsheet" id="createInputTable" role="grid">
+<thead>
+<tr>
+<th style="width: 30%;">STORE NAME</th>
+<th style="width: 30%;">AGREEMENT ID</th>
+<th style="width: 30%;">INVOICE NUMBER</th>
+<th style="width: 10%;">ACTIONS</th>
+</tr>
+</thead>
+<tbody id="createInputRows"></tbody>
+</table>
+</div>
+<div class="mt-2">
+<button aria-label="Add New Row" class="btn btn-outline-primary btn-sm" onclick="addCreateInputRow()" type="button">
+<i class="fas fa-plus"></i> Add Row
+                                    </button>
+</div>
+</div>
+<div class="action-buttons">
+<button aria-label="Generate Dispute Links" class="btn btn-primary" disabled="" id="generateCreateLinks" type="button">
+<span id="generateCreateText">Generate Links</span>
+<span class="loading" id="generateCreateSpinner" style="display: none;"></span>
+</button>
+<button aria-label="Clear Input" class="btn btn-outline-secondary" onclick="clearCreateInput()" type="button">Clear Input</button>
+</div>
+</div>
+</div>
+<div class="col-md-6">
+<div class="panel output-panel">
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h1><i class="fas fa-list"></i> Generated Links</h1>
+<div class="search-container">
+<input aria-label="Search Generated Links" class="form-control" id="searchCreateResults" placeholder="Search..." type="text"/>
+<button aria-label="Export to Excel" class="btn btn-outline-primary" id="exportCreateExcel" type="button">
+<span id="exportCreateText"><i class="fas fa-file-excel"></i> Export</span>
+<span class="loading" id="exportCreateSpinner" style="display: none;"></span>
+</button>
+</div>
+</div>
+<div class="stats-card">
+<div class="row">
+<div class="col">
+<div class="stats-value" id="createTotalLinks">0</div>
+<div>Total Links</div>
+</div>
+<div class="col">
+<div class="stats-value" id="createUniqueAgreements">0</div>
+<div>Unique Agreements</div>
+</div>
+<div class="col">
+<div class="stats-value" id="createTotalInvoices">0</div>
+<div>Total Invoices</div>
+</div>
+<div class="col">
+<div class="stats-value" id="createSelectedCount">0</div>
+<div>Selected</div>
+</div>
+</div>
+</div>
+<div class="quick-actions">
+<div aria-label="Select All Links" class="quick-action-btn" onclick="toggleCreateSelectAll()">
+<i class="fas fa-check-square"></i> Select All
+                                </div>
+<div aria-label="Open Selected Links" class="quick-action-btn" onclick="openCreateSelectedLinks()">
+<i class="fas fa-external-link-alt"></i> Open Selected
+                                     </div>
+<div aria-label="Copy Selected Links" class="quick-action-btn" onclick="copyCreateSelectedLinks()">
+<i class="fas fa-copy"></i> Copy Selected
+                                 </div>
+<div aria-label="Copy All Links" class="quick-action-btn" onclick="copyCreateAllLinks()">
+<i class="fas fa-copy"></i> Copy All
+                                 </div>
+<div aria-label="Clear Results" class="quick-action-btn" onclick="clearCreateResults()">
+<i class="fas fa-trash-alt"></i> Clear Results
+                                 </div>
+</div>
+<div style="flex: 1; overflow-y: auto;">
+<table aria-label="Generated Dispute Links" class="results-table create-results-table" role="grid">
+<thead>
+<tr>
+<th aria-label="Select" class="fixed-width"></th>
+<th data-sort="storeName">Store Name<span class="sort-arrow"></span></th>
+<th data-sort="agreementId">Agreement ID<span class="sort-arrow"></span></th>
+<th>Invoice Numbers</th>
+<th>Count</th>
+<th>Processed Date</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="createResultsTable"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div aria-labelledby="dispute-tab" class="tab-pane fade" id="disputeId" role="tabpanel">
+<div class="row">
+<div class="col-md-6">
+<div class="panel input-panel">
+<h1><i class="fas fa-link"></i> Link Generator</h1>
+<form id="disputeLinkForm">
+<div class="mb-3">
+<label class="form-label" for="storeName">Store Name</label>
+<input class="form-control" id="storeName" placeholder="e.g., UK - Callaway Golf, US - Veridian Healthcare" title="Enter store name for country detection" type="text"/>
+<div class="invalid-feedback">Store name is required</div>
+<select aria-label="Select country" class="form-control mt-2" id="countryOverride">
+<option value="">Auto-detect</option>
+</select>
+</div>
+<div class="store-input-group">
+<div class="store-name-input">
+<div class="country-badge hidden" id="countryBadge">
+<span id="countryFlag"></span>
+<span id="countryCode"></span>
+</div>
+</div>
+<button aria-label="Open Vendor Central Portal" class="btn btn-outline-primary open-portal-btn" disabled="" id="openPortalBtn" type="button">
+<i class="fas fa-external-link-alt"></i> Open Portal
+                                    </button>
+</div>
+<div class="mb-3">
+<label class="form-label" for="baseUrl">Base URL</label>
+<input class="form-control" id="baseUrl" placeholder="https://vendorcentral.amazon.com/hz/vendor/members/disputes/detail?encryptedVendorGroupId=...&amp;marketplace=US" title="Enter a valid base URL" type="text"/>
+<div class="invalid-feedback">Please enter a valid URL</div>
+</div>
+<div class="settings-group mb-3">
+<div style="flex: 1;">
+<label class="form-label" for="maxDisputeRows">Maximum Rows</label>
+<select aria-label="Select maximum rows" class="form-control" id="maxDisputeRows">
+<option value="50">50</option>
+<option value="100">100</option>
+<option value="200">200</option>
+<option value="500">500</option>
+<option value="1000">1000</option>
+</select>
+</div>
+<div style="flex: 1;">
+<label class="form-label" for="disputeLinkDelay">Delay Between Links (ms)</label>
+<input aria-label="Delay between opening links in milliseconds" class="form-control" id="disputeLinkDelay" max="5000" min="0" type="number" value="500"/>
+<div class="invalid-feedback">Delay must be between 0 and 5000 ms</div>
+</div>
+</div>
+<div class="action-buttons">
+<button aria-label="Generate Links" class="btn btn-primary" disabled="" id="generateDisputeLinks" type="submit">
+<span id="generateDisputeText">Generate</span>
+<span class="loading" id="generateDisputeSpinner" style="display: none;"></span>
+</button>
+<button aria-label="Clear Form" class="btn btn-outline-danger" onclick="clearDisputeForm()" type="button">Clear</button>
+</div>
+<div class="mb-3">
+<label class="form-label">Dispute IDs</label>
+<div class="input-spreadsheet-container" id="disputeInputContainer">
+<table aria-label="Input Dispute IDs" class="input-spreadsheet" id="disputeInputTable" role="grid">
+<thead>
+<tr>
+<th style="width: 90%;">DISPUTE ID</th>
+<th style="width: 10%;">ACTIONS</th>
+</tr>
+</thead>
+<tbody id="disputeInputRows"></tbody>
+</table>
+</div>
+<div class="mt-2">
+<button aria-label="Add New Row" class="btn btn-outline-primary btn-sm" onclick="addDisputeInputRow()" type="button">
+<i class="fas fa-plus"></i> Add Row
+                                         </button>
+</div>
+</div>
+</form>
+</div>
+</div>
+<div class="col-md-6">
+<div class="panel output-panel">
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h1><i class="fas fa-list"></i> Results</h1>
+<div class="search-container">
+<input aria-label="Search Dispute Results" class="form-control" id="searchDisputeResults" placeholder="Search..." type="text"/>
+<button aria-label="Export to Excel" class="btn btn-outline-primary" id="exportDisputeExcel" type="button">
+<span id="exportDisputeText"><i class="fas fa-file-excel"></i> Export</span>
+<span class="loading" id="exportDisputeSpinner" style="display: none;"></span>
+</button>
+</div>
+</div>
+<div class="quick-actions">
+<div aria-label="Select All Links" class="quick-action-btn" onclick="toggleDisputeSelectAll()">
+<i class="fas fa-check-square"></i> Select All
+                                 </div>
+<div aria-label="Open Selected Links" class="quick-action-btn" onclick="openDisputeSelected()">
+<i class="fas fa-external-link-alt"></i> Open Selected
+                                 </div>
+<div aria-label="Copy Selected Links" class="quick-action-btn" onclick="copyDisputeSelected()">
+<i class="fas fa-copy"></i> Copy Selected
+                                 </div>
+<div aria-label="Copy All Links" class="quick-action-btn" onclick="copyDisputeAll()">
+<i class="fas fa-copy"></i> Copy All
+                                 </div>
+</div>
+<div style="flex: 1; overflow-y: auto;">
+<table aria-label="Generated Dispute ID Links" class="results-table dispute-results-table" role="grid">
+<thead>
+<tr>
+<th aria-label="Select" class="fixed-width"></th>
+<th data-sort="id">Dispute ID<span class="sort-arrow"></span></th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="disputeResultsTable"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="footer">© Bonez 2025</div>
+<div class="toast" id="toast"></div>
+<div aria-hidden="true" aria-labelledby="helpModalLabel" class="modal fade" id="helpModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="helpModalLabel">How to Use</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<div class="modal-body">
+<h6>Create Dispute Links</h6>
+<ul>
+<li>Enter a <strong>Store Name</strong> for each row to auto-detect the country.</li>
+<li>Set the <strong>Maximum Rows</strong> (up to 1000) and <strong>Delay Between Links</strong> (0–5000 ms).</li>
+<li>Input <strong>Agreement IDs</strong> (8-10 digits, e.g., 76543210) and <strong>Invoice Numbers</strong> (alphanumeric with hyphens, e.g., INV-123456) in the table. Use the scrollbar to navigate large datasets.</li>
+<li>Use the "Add Row" button to add more rows, or the trash icon to delete a row.</li>
+<li>Paste tab-separated data to populate rows (up to the maximum row limit).</li>
+<li>Click <strong>Generate Links</strong> to create dispute links based on the store name's detected country.</li>
+<li>Select links and use actions: <strong>Open Selected</strong> (opens links with the specified delay), <strong>Copy Selected</strong>, <strong>Copy All</strong>, or <strong>Export</strong> to Excel.</li>
+<li><strong>Copy All</strong> copies links as Google Sheets formulas, displaying Agreement IDs as clickable hyperlinks when pasted into a single column.</li>
+</ul>
+<h6>Dispute ID Links</h6>
+<ul>
+<li>Enter a <strong>Store Name</strong> and select a country.</li>
+<li>Enter a <strong>Base URL</strong> (e.g., "https://vendorcentral.amazon.com/hz/vendor/members/disputes/detail?encryptedVendorGroupId=...&amp;marketplace=US"). Any existing <code>disputeId</code> in the base URL will be replaced by the input Dispute IDs.</li>
+<li>Set the <strong>Maximum Rows</strong> (up to 1000) and <strong>Delay Between Links</strong> (0–5000 ms).</li>
+<li>Type or paste <strong>Dispute IDs</strong> (e.g., DSPT123) into the table (up to the maximum row limit). Use the scrollbar to navigate large datasets. Use the "Add Row" button or trash icon as needed.</li>
+<li>Paste multiple Dispute IDs separated by newlines, commas, spaces, tabs, semicolons, or pipes. Each valid ID (e.g., DSPT123) will create a new row. Duplicates are automatically removed.</li>
+<li>Click <strong>Generate</strong> to create links with the input Dispute IDs.</li>
+<li>Use <strong>Select All</strong>, <strong>Open Selected</strong> (opens links with the specified delay), <strong>Copy Selected</strong>, or <strong>Copy All</strong>.</li>
+<li><strong>Copy All</strong> copies links as Google Sheets formulas, displaying Dispute IDs as clickable hyperlinks when pasted into a single column.</li>
+<li>Click <strong>Export</strong> to download an Excel file with clickable links.</li>
+</ul>
+</div>
+<div class="modal-footer">
+<button aria-label="Close Modal" class="btn btn-outline-primary" data-bs-dismiss="modal" type="button">Close</button>
+</div>
+</div>
+</div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+        // Shared Global Variables
+        let createGeneratedLinks = [];
+        let disputeResultsData = [];
+        const disputeType = "CC";
+        // Country Data
+        const countryData = {
+            US: { url: "https://vendorcentral.amazon.com/home/vc", name: "United States (US)", flag: "🇺🇸" },
+            CA: { url: "https://vendorcentral.amazon.ca/home/vc", name: "Canada (CA)", flag: "🇨🇦" },
+            MX: { url: "https://vendorcentral.amazon.com.mx/home/vc", name: "Mexico (MX)", flag: "🇲🇽" },
+            BR: { url: "https://vendorcentral.amazon.com.br/home/vc", name: "Brazil (BR)", flag: "🇧🇷" },
+            GB: { url: "https://vendorcentral.amazon.co.uk/home/vc", name: "United Kingdom (UK)", flag: "🇬🇧" },
+            DE: { url: "https://vendorcentral.amazon.de/home/vc", name: "Germany (DE)", flag: "🇩🇪" },
+            FR: { url: "https://vendorcentral.amazon.fr/home/vc", name: "France (FR)", flag: "🇫🇷" },
+            ES: { url: "https://vendorcentral.amazon.es/home/vc", name: "Spain (ES)", flag: "🇪🇸" },
+            IT: { url: "https://vendorcentral.amazon.it/home/vc", name: "Italy (IT)", flag: "🇮🇹" },
+            NL: { url: "https://vendorcentral.amazon.nl/home/vc", name: "Netherlands (NL)", flag: "🇳🇱" },
+            SE: { url: "https://vendorcentral.amazon.se/home/vc", name: "Sweden (SE)", flag: "🇸🇪" },
+            PL: { url: "https://vendorcentral.amazon.pl/home/vc", name: "Poland (PL)", flag: "🇵🇱" },
+            AE: { url: "https://vendorcentral.amazon.ae/home/vc", name: "United Arab Emirates (AE)", flag: "🇦🇪" },
+            IN: { url: "https://vendorcentral.amazon.in/home/vc", name: "India (IN)", flag: "🇮🇳" },
+            SG: { url: "https://vendorcentral.amazon.sg/home/vc", name: "Singapore (SG)", flag: "🇸🇬" },
+            AU: { url: "https://vendorcentral.amazon.com.au/home/vc", name: "Australia (AU)", flag: "🇦🇺" },
+            JP: { url: "https://vendorcentral.amazon.co.jp/home/vc", name: "Japan (JP)", flag: "🇯🇵" },
+            IE: { url: "https://vendorcentral.amazon.de/home/vc", name: "Ireland (IE)", flag: "🇮🇪" },
+            BE: { url: "https://vendorcentral.amazon.nl/home/vc", name: "Belgium (BE)", flag: "🇧🇪" },
+            ZA: { url: "https://vendorcentral.amazon.com/home/vc", name: "South Africa (ZA)", flag: "🇿🇦" },
+            EG: { url: "https://vendorcentral.amazon.eg/home/vc", name: "Egypt (EG)", flag: "🇪🇬" },
+            TR: { url: "https://vendorcentral.amazon.com.tr/home/vc", name: "Turkey (TR)", flag: "🇹🇷" },
+            SA: { url: "https://vendorcentral.amazon.sa/home/vc", name: "Saudi Arabia (SA)", flag: "🇸🇦" }
+        };
+        // Utility Functions
+        function escapeHtml(text) {
+            if (typeof text !== 'string') return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function safeEncodeUrl(url) {
+            if (typeof url !== 'string') return '';
+            return url.replace(/'/g, '\\u0027');
+        }
+
+        function escapeForGoogleSheets(text) {
+            if (typeof text !== 'string') return '';
+            return text.replace(/"/g, '""');
+        }
+
+        function validateUrl(url) {
+            try {
+                new URL(url);
+                return true;
+            } catch {
+                return false;
+             }
+        }
+
+        function showToast(message, type = 'success', options = {}) {
+            const toast = document.querySelector('#toast');
+            toast.innerHTML = message;
+            toast.classList.remove('bg-success', 'bg-danger');
+            toast.classList.add(type === 'error' ? 'bg-danger' : 'bg-success');
+             if (options.undo) {
+                toast.innerHTML += ` <a href="#" onclick="(${options.undo})(); this.parentElement.classList.remove('show'); return false;">Undo</a>`;
+            }
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function detectCountry(storeName) {
+            if (!storeName) return { code: null, confidence: 0 };
+            let code = null;
+             let confidence = 0;
+            const lowerName = storeName.toLowerCase();
+            const explicitCodeMatch = storeName.match(/^([A-Z]{2})\s*-\s*(~|.*)/i);
+            if (explicitCodeMatch && explicitCodeMatch[1]) {
+                const matchedCode = explicitCodeMatch[1].toUpperCase();
+                if (countryData[matchedCode] || matchedCode === 'UK') {
+                     code = matchedCode === 'UK' ? 'GB' : matchedCode;
+                    confidence = 0.9;
+                }
+            }
+            if (!code) {
+                 const parenMatch = storeName.match(/\(([A-Z]{2})\s*(Home|.*)\)/i);
+                if (parenMatch && parenMatch[1]) {
+                    const matchedCode = parenMatch[1].toUpperCase();
+                    if (countryData[matchedCode]) {
+                        code = matchedCode;
+                        confidence = 0.8;
+                    }
+                }
+            }
+            if (!code && lowerName.includes('pan-eu')) {
+                if (lowerName.includes('gb') || lowerName.includes('uk')) code = 'GB', confidence = 0.7;
+                else if (lowerName.includes('de')) code = 'DE', confidence = 0.7;
+                else if (lowerName.includes('fr')) code = 'FR', confidence = 0.7;
+                else if (lowerName.includes('it')) code = 'IT', confidence = 0.7;
+                else if (lowerName.includes('es')) code = 'ES', confidence = 0.7;
+                else if (lowerName.includes('se')) code = 'SE', confidence = 0.7;
+            }
+            if (!code) {
+                const countryKeywords = { 'canada': 'CA', 'australia': 'AU', 'japan': 'JP', 'mexico': 'MX', 'brazil': 'BR', 'india': 'IN', 'uae': 'AE', 'dubai': 'AE', 'ireland': 'IE', 'belgium': 'BE', 'south africa': 'ZA', 'egypt': 'EG', 'turkey': 'TR', 'saudi arabia': 'SA' };
+                 for (const [keyword, matchedCode] of Object.entries(countryKeywords)) {
+                    if (lowerName.includes(keyword)) {
+                        code = matchedCode;
+                        confidence = 0.6;
+                        break;
+                    }
+                }
+            }
+            if (!code) {
+                const companyPatterns = { '株式会社': 'JP', 'pty ltd': 'AU', 'inc.': 'US', 'llc': 'US', 'ltd': 'GB' };
+                 for (const [pattern, matchedCode] of Object.entries(companyPatterns)) {
+                    if (lowerName.includes(pattern)) {
+                        code = matchedCode;
+                        confidence = 0.5;
+                        break;
+                    }
+                }
+            }
+            if (!code) code = 'US', confidence = 0.3;
+            return { code, confidence };
+        }
+
+        function updateCountryBadge(code, confidence) {
+            const badge = document.querySelector('#countryBadge');
+            const flag = document.querySelector('#countryFlag');
+            const codeSpan = document.querySelector('#countryCode');
+            const portalBtn = document.querySelector('#openPortalBtn');
+            if (code && code in countryData) {
+                flag.textContent = countryData[code].flag;
+                codeSpan.textContent = code;
+                badge.classList.remove('hidden', 'confident', 'ambiguous');
+                badge.classList.add(confidence > 0.7 ? 'confident' : 'ambiguous');
+                portalBtn.disabled = false;
+                portalBtn.title = `Open ${countryData[code].name} Vendor Central`;
+            } else {
+                badge.classList.add('hidden');
+                portalBtn.disabled = true;
+                portalBtn.removeAttribute('title');
+            }
+        }
+
+        function getCurrentCountryCode(storeName) {
+            return detectCountry(storeName).code || 'US';
+        }
+
+        function getCurrentCountryName(storeName) {
+            const code = getCurrentCountryCode(storeName);
+            return countryData[code].name;
+        }
+
+        function validateAgreementId(id) {
+            return /^\d{8,10}$/.test(id);
+        }
+
+        function validateInvoiceNumber(num) {
+            return /^[A-Za-z0-9-]{5,20}$/.test(num);
+        }
+
+        function validateDisputeId(id) {
+            return /^DSPT\d+$/.test(id);
+        }
+
+        function validateCreateInputs() {
+            const delayInput = document.querySelector('#createLinkDelay');
+            const delay = parseInt(delayInput.value);
+            const isDelayValid = !isNaN(delay) && delay >= 0 && delay <= 5000;
+            delayInput.classList.toggle('is-invalid', !isDelayValid);
+            let hasValidInput = false;
+            let allInputsValid = true;
+            const rows = document.querySelectorAll('#createInputRows tr');
+            if (rows.length === 0) {
+                document.querySelector('#generateCreateLinks').disabled = true;
+                return;
+            }
+            rows.forEach(row => {
+                const storeNameInput = row.querySelector('.storeName');
+                const agreementIdInput = row.querySelector('.agreementId');
+                const invoiceNumberInput = row.querySelector('.invoiceNumber');
+                const storeName = storeNameInput.value.trim();
+                 const agreementId = agreementIdInput.value.trim();
+                const invoiceNumber = invoiceNumberInput.value.trim();
+
+                const hasStoreName = storeName.length > 0;
+                const isAgreementValid = agreementId ? validateAgreementId(agreementId) : true;
+                const isInvoiceValid = invoiceNumber ? validateInvoiceNumber(invoiceNumber) : true;
+
+                 storeNameInput.classList.toggle('is-invalid', !hasStoreName);
+                agreementIdInput.classList.toggle('is-invalid', !isAgreementValid);
+                invoiceNumberInput.classList.toggle('is-invalid', !isInvoiceValid);
+                row.classList.toggle('invalid-row', !hasStoreName || !isAgreementValid || !isInvoiceValid);
+
+                if (storeName && agreementId && invoiceNumber && hasStoreName && isAgreementValid && isInvoiceValid) {
+                    hasValidInput = true;
+                }
+                if ((storeName && !hasStoreName) || (agreementId && !isAgreementValid) || (invoiceNumber && !isInvoiceValid)) {
+                    allInputsValid = false;
+                }
+            });
+
+            document.querySelector('#generateCreateLinks').disabled = !hasValidInput || !allInputsValid || !isDelayValid;
+        }
+
+        function validateDisputeInputs() {
+            const storeName = document.querySelector('#storeName').value.trim();
+            const baseUrl = document.querySelector('#baseUrl').value.trim();
+            const disputeIdInputs = document.querySelectorAll('#disputeInputRows .disputeId');
+            const disputeIds = Array.from(disputeIdInputs).map(input => input.value.trim()).filter(id => id);
+            const hasStoreName = storeName.length > 0;
+            const isBaseUrlValid = baseUrl ? validateUrl(baseUrl) : false;
+            let allDisputeIdsValid = true;
+            const delayInput = document.querySelector('#disputeLinkDelay');
+            const delay = parseInt(delayInput.value);
+            const isDelayValid = !isNaN(delay) && delay >= 0 && delay <= 5000;
+            delayInput.classList.toggle('is-invalid', !isDelayValid);
+
+            document.querySelector('#storeName').classList.toggle('is-invalid', !hasStoreName);
+            document.querySelector('#baseUrl').classList.toggle('is-invalid', !isBaseUrlValid && baseUrl);
+
+            disputeIdInputs.forEach(input => {
+                const id = input.value.trim();
+                const isValid = id ? validateDisputeId(id) : true;
+                input.classList.toggle('is-invalid', !isValid);
+                const row = input.closest('tr');
+                 row.classList.toggle('invalid-row', !isValid);
+                if (id && !isValid) allDisputeIdsValid = false;
+            });
+            const maxRows = parseInt(document.querySelector('#maxDisputeRows').value) || 50;
+            const isWithinLimit = disputeIds.length <= maxRows;
+
+            document.querySelector('#generateDisputeLinks').disabled = !hasStoreName || !isBaseUrlValid || disputeIds.length === 0 || !allDisputeIdsValid || !isDelayValid || !isWithinLimit;
+        }
+
+        // Create Dispute Links Functions
+        function initializeCreateInput() {
+            const tbody = document.querySelector('#createInputRows');
+            tbody.innerHTML = '';
+            addCreateInputRow();
+            validateCreateInputs();
+        }
+
+        function addCreateInputRow(storeName = '', agreementId = '', invoiceNumber = '') {
+            const maxRows = parseInt(document.querySelector('#maxCreateRows').value) || 50;
+            const currentRows = document.querySelectorAll('#createInputRows tr').length;
+            if (currentRows >= maxRows) {
+                showToast(`Maximum ${maxRows} rows reached`, 'error');
+                return;
+            }
+            const safeStoreName = escapeHtml(storeName);
+            const safeAgreementId = escapeHtml(agreementId);
+            const safeInvoiceNumber = escapeHtml(invoiceNumber);
+            const rowIndex = currentRows;
+            const newRow = `
+                <tr>
+                    <td>
+                        <input type="text" class="storeName form-control" value="${safeStoreName}" placeholder="e.g., UK - Callaway Golf" title="Enter store name for country detection" aria-label="Store Name ${rowIndex + 1}">
+                         <div class="invalid-feedback">Store name is required</div>
+                    </td>
+                    <td>
+                        <input type="text" class="agreementId form-control" value="${safeAgreementId}" placeholder="e.g., 76543210" title="Numeric, 8-10 digits (e.g., 76543210)" aria-label="Agreement ID ${rowIndex + 1}">
+                         <div class="invalid-feedback">Numeric ID (8-10 digits) required</div>
+                    </td>
+                    <td>
+                        <input type="text" class="invoiceNumber form-control" value="${safeInvoiceNumber}" placeholder="e.g., INV-123456" title="Alphanumeric with hyphens (5-20 characters)" aria-label="Invoice Number ${rowIndex + 1}">
+                        <div class="invalid-feedback">Alphanumeric with hyphens (5-20 chars)</div>
+                    </td>
+                    <td class="action-cell">
+                        <button type="button" class="btn btn-outline-danger btn-sm action-btn" onclick="removeCreateInputRow(this)" aria-label="Delete Row ${rowIndex + 1}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+             `;
+            document.querySelector('#createInputRows').insertAdjacentHTML('beforeend', newRow);
+            validateCreateInputs();
+        }
+
+        function removeCreateInputRow(button) {
+            const row = button.closest('tr');
+            row.remove();
+            validateCreateInputs();
+            if (document.querySelectorAll('#createInputRows tr').length === 0) {
+                addCreateInputRow();
+            }
+            showToast('Row removed');
+        }
+
+        function clearCreateInput() {
+            const previousData = document.querySelector('#createInputRows').innerHTML;
+            document.querySelector('#createInputRows').innerHTML = '';
+            initializeCreateInput();
+            showToast('Input cleared', 'success', {
+                undo: () => document.querySelector('#createInputRows').innerHTML = previousData
+            });
+        }
+
+        function clearCreateResults() {
+            const previousData = createGeneratedLinks.slice();
+            createGeneratedLinks = [];
+            updateCreateResultsTable();
+            updateCreateStats();
+            showToast('Results cleared', 'success', {
+                undo: () => {
+                    createGeneratedLinks = previousData;
+                    updateCreateResultsTable();
+                    updateCreateStats();
+                 }
+            });
+        }
+
+        function handleCreatePaste(e) {
+            e.preventDefault();
+            let pastedData;
+            try {
+                pastedData = (e.clipboardData || window.clipboardData).getData('text');
+            } catch (err) {
+                showToast(`Error accessing clipboard: ${err.message}`, 'error');
+                return;
+            }
+            if (!pastedData) {
+                showToast('No data to paste', 'error');
+                return;
+            }
+            const maxRows = parseInt(document.querySelector('#maxCreateRows').value) || 50;
+            const rows = pastedData.trim().split('\n').slice(0, maxRows);
+            document.querySelector('#createInputRows').innerHTML = '';
+            rows.forEach(row => {
+                const columns = row.split('\t').map(col => col.trim());
+                addCreateInputRow(columns[0] || '', columns[1] || '', columns[2] || '');
+            });
+            validateCreateInputs();
+            showToast(`Pasted ${Math.min(rows.length, maxRows)} rows`);
+        }
+
+        function generateCreateLinks() {
+            const delayInput = document.querySelector('#createLinkDelay');
+            const delay = parseInt(delayInput.value);
+            if (isNaN(delay) || delay < 0 || delay > 5000) {
+                delayInput.classList.add('is-invalid');
+                showToast('Delay must be between 0 and 5000 ms', 'error');
+                return;
+            }
+            const rows = document.querySelectorAll('#createInputRows tr');
+            let hasValidInput = false;
+            rows.forEach(row => {
+                const storeName = row.querySelector('.storeName').value.trim();
+                const agreementId = row.querySelector('.agreementId').value.trim();
+                const invoiceNumber = row.querySelector('.invoiceNumber').value.trim();
+                if (storeName && agreementId && invoiceNumber) hasValidInput = true;
+            });
+            if (!hasValidInput) {
+                showToast('Please enter at least one valid store name, agreement ID, and invoice number', 'error');
+                return;
+            }
+
+            document.querySelector('#generateCreateText').style.display = 'none';
+            document.querySelector('#generateCreateSpinner').style.display = 'inline-block';
+            document.querySelector('#generateCreateLinks').disabled = true;
+
+            const agreementMap = {};
+            rows.forEach(row => {
+                const storeName = row.querySelector('.storeName').value.trim();
+                const agreementId = row.querySelector('.agreementId').value.trim();
+                const invoiceNumber = row.querySelector('.invoiceNumber').value.trim();
+                if (storeName && agreementId && invoiceNumber && validateAgreementId(agreementId) && validateInvoiceNumber(invoiceNumber)) {
+                     const key = `${storeName}|${agreementId}`;
+                    if (!agreementMap[key]) agreementMap[key] = { storeName, agreementId, invoices: [], countryCode: getCurrentCountryCode(storeName), countryName: getCurrentCountryName(storeName) };
+                    agreementMap[key].invoices.push(invoiceNumber);
+                }
+            });
+            for (const key in agreementMap) {
+                agreementMap[key].invoices.sort();
+            }
+            const newLinks = [];
+            for (const key in agreementMap) {
+                const { storeName, agreementId, invoices, countryCode, countryName } = agreementMap[key];
+                const portalUrl = countryData[countryCode].url.replace('/home/vc', '');
+                const invoiceList = invoices.join(',');
+                const disputeLink = `${portalUrl}/katalmonsapp/vendor/members/disputes/create?lineIds=${invoiceList}&disputeType=${disputeType}`;
+                newLinks.push({
+                    storeName,
+                    agreementId,
+                    invoiceNumbers: invoices,
+                    count: invoices.length,
+                     url: disputeLink,
+                    processedDate: new Date().toLocaleString(),
+                    selected: false,
+                    countryCode,
+                    countryName
+                 });
+            }
+
+            createGeneratedLinks = [...createGeneratedLinks, ...newLinks];
+            updateCreateResultsTable();
+            updateCreateStats();
+            document.querySelector('#generateCreateText').style.display = 'inline';
+            document.querySelector('#generateCreateSpinner').style.display = 'none';
+            document.querySelector('#generateCreateLinks').disabled = false;
+            showToast(`Generated ${newLinks.length} dispute links`);
+        }
+
+        function updateCreateResultsTable(searchQuery = '') {
+            const tbody = document.querySelector('#createResultsTable');
+            tbody.innerHTML = '';
+            if (createGeneratedLinks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">No links generated yet</td></tr>';
+                return;
+            }
+            const lowerQuery = searchQuery.toLowerCase();
+            createGeneratedLinks.forEach((link, index) => {
+                const invoiceList = link.invoiceNumbers.map(num => escapeHtml(num)).join(', ');
+                if (searchQuery && !link.storeName.toLowerCase().includes(lowerQuery) && !link.agreementId.toLowerCase().includes(lowerQuery) && !invoiceList.toLowerCase().includes(lowerQuery)) {
+                    return;
+                }
+                 const row = `
+                    <tr data-index="${index}" class="${link.selected ? 'selected-row' : ''}">
+                        <td><input type="checkbox" class="row-checkbox select-checkbox" ${link.selected ? 'checked' : ''} aria-label="Select row"></td>
+                        <td>${escapeHtml(link.storeName)}</td>
+                         <td>${escapeHtml(link.agreementId)}</td>
+                        <td class="invoice-list" title="${invoiceList}">${invoiceList}</td>
+                        <td>${link.count}</td>
+                        <td>${escapeHtml(link.processedDate)}</td>
+                         <td>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary" onclick="openLink('${escapeHtml(link.url)}')" aria-label="Open Link">
+                                     <i class="fas fa-external-link-alt"></i> Open
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('${safeEncodeUrl(link.url)}')" aria-label="Copy Link">
+                                     <i class="fas fa-copy"></i> Copy
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="removeCreateLink(${index})" aria-label="Delete Link">
+                                     <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                         </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        function updateCreateStats() {
+            const totalLinks = createGeneratedLinks.length;
+            const uniqueAgreements = new Set(createGeneratedLinks.map(link => link.agreementId)).size;
+            const totalInvoices = createGeneratedLinks.reduce((sum, link) => sum + link.count, 0);
+            const selectedCount = createGeneratedLinks.filter(link => link.selected).length;
+
+            document.querySelector('#createTotalLinks').textContent = totalLinks;
+            document.querySelector('#createUniqueAgreements').textContent = uniqueAgreements;
+            document.querySelector('#createTotalInvoices').textContent = totalInvoices;
+            document.querySelector('#createSelectedCount').textContent = selectedCount;
+        }
+
+        function openLink(url) {
+            window.open(url, '_blank');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(decodeURIComponent(text)).then(() => {
+                showToast('Link copied to clipboard');
+            }).catch(() => {
+                showToast('Failed to copy link', 'error');
+            });
+        }
+
+        function removeCreateLink(index) {
+            const removedLink = createGeneratedLinks.splice(index, 1)[0];
+            updateCreateResultsTable();
+            updateCreateStats();
+            showToast('Link removed', 'success', {
+                undo: () => {
+                    createGeneratedLinks.splice(index, 0, removedLink);
+                    updateCreateResultsTable();
+                    updateCreateStats();
+                 }
+            });
+        }
+
+        function toggleCreateSelectAll() {
+            const allSelected = createGeneratedLinks.every(link => link.selected);
+            createGeneratedLinks.forEach(link => link.selected = !allSelected);
+            updateCreateResultsTable();
+            updateCreateStats();
+        }
+
+        function openCreateSelectedLinks() {
+            const selectedLinks = createGeneratedLinks.filter(link => link.selected);
+            if (selectedLinks.length === 0) {
+                showToast('No links selected', 'error');
+                return;
+            }
+            const delay = parseInt(document.querySelector('#createLinkDelay').value) || 500;
+            selectedLinks.forEach((link, index) => {
+                setTimeout(() => {
+                    window.open(link.url, '_blank');
+                }, index * delay);
+            });
+            showToast(`Opening ${selectedLinks.length} links with ${delay}ms delay`);
+        }
+
+        function copyCreateSelectedLinks() {
+            const selectedLinks = createGeneratedLinks.filter(link => link.selected);
+            if (selectedLinks.length === 0) {
+                showToast('No links selected', 'error');
+                return;
+            }
+            const text = selectedLinks.map(link => link.url).join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`${selectedLinks.length} links copied to clipboard`);
+            }).catch(() => {
+                showToast('Failed to copy links', 'error');
+            });
+        }
+
+        function copyCreateAllLinks() {
+            if (createGeneratedLinks.length === 0) {
+                showToast('No links to copy', 'error');
+                return;
+            }
+            const text = createGeneratedLinks.map(link => 
+                `=HYPERLINK("${escapeForGoogleSheets(link.url)}", "${escapeForGoogleSheets(link.agreementId || 'Agreement')}")`
+            ).join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`${createGeneratedLinks.length} links copied to clipboard`);
+            }).catch(() => {
+                showToast('Failed to copy links', 'error');
+            });
+        }
+
+        function exportCreateExcel() {
+            if (createGeneratedLinks.length === 0) {
+                showToast('No data to export', 'error');
+                return;
+            }
+            document.querySelector('#exportCreateText').style.display = 'none';
+            document.querySelector('#exportCreateSpinner').style.display = 'inline-block';
+            document.querySelector('#exportCreateExcel').disabled = true;
+
+            const data = createGeneratedLinks.map(link => ({
+                'Store Name': link.storeName,
+                'Agreement ID': link.agreementId,
+                'Invoice Numbers': link.invoiceNumbers.join(', '),
+                'Count': link.count,
+                'URL': link.url,
+                 'Processed Date': link.processedDate,
+                'Country': link.countryName
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Dispute Links');
+            XLSX.writeFile(wb, `Dispute_Links_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+            document.querySelector('#exportCreateText').style.display = 'inline';
+            document.querySelector('#exportCreateSpinner').style.display = 'none';
+            document.querySelector('#exportCreateExcel').disabled = false;
+            showToast('Exported to Excel');
+        }
+
+        // Dispute ID Links Functions
+        function initializeDisputeInput() {
+            const tbody = document.querySelector('#disputeInputRows');
+            tbody.innerHTML = '';
+            addDisputeInputRow();
+            validateDisputeInputs();
+        }
+
+        function addDisputeInputRow(disputeId = '') {
+            const maxRows = parseInt(document.querySelector('#maxDisputeRows').value) || 50;
+            const currentRows = document.querySelectorAll('#disputeInputRows tr').length;
+            if (currentRows >= maxRows) {
+                showToast(`Maximum ${maxRows} rows reached`, 'error');
+                return;
+            }
+            const safeDisputeId = escapeHtml(disputeId);
+            const rowIndex = currentRows;
+            const newRow = `
+                <tr>
+                    <td>
+                        <input type="text" class="disputeId form-control" value="${safeDisputeId}" placeholder="e.g., DSPT123" title="Dispute ID (e.g., DSPT123)" aria-label="Dispute ID ${rowIndex + 1}">
+                         <div class="invalid-feedback">Dispute ID must start with DSPT followed by numbers</div>
+                    </td>
+                    <td class="action-cell">
+                        <button type="button" class="btn btn-outline-danger btn-sm action-btn" onclick="removeDisputeInputRow(this)" aria-label="Delete Row ${rowIndex + 1}">
+                             <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            document.querySelector('#disputeInputRows').insertAdjacentHTML('beforeend', newRow);
+            validateDisputeInputs();
+        }
+
+        function removeDisputeInputRow(button) {
+            const row = button.closest('tr');
+            row.remove();
+            validateDisputeInputs();
+            if (document.querySelectorAll('#disputeInputRows tr').length === 0) {
+                addDisputeInputRow();
+            }
+            showToast('Row removed');
+        }
+
+        function clearDisputeForm() {
+            const previousData = {
+                baseUrl: document.querySelector('#baseUrl').value,
+                rows: document.querySelector('#disputeInputRows').innerHTML
+            };
+            document.querySelector('#baseUrl').value = '';
+            document.querySelector('#disputeInputRows').innerHTML = '';
+            initializeDisputeInput();
+            showToast('Form cleared', 'success', {
+                undo: () => {
+                    document.querySelector('#baseUrl').value = previousData.baseUrl;
+                    document.querySelector('#disputeInputRows').innerHTML = previousData.rows;
+                    validateDisputeInputs();
+                 }
+            });
+        }
+
+        function handleDisputePaste(e) {
+            e.preventDefault();
+            let pastedData;
+            try {
+                pastedData = (e.clipboardData || window.clipboardData).getData('text');
+            } catch (err) {
+                showToast(`Error accessing clipboard: ${err.message}`, 'error');
+                return;
+            }
+            if (!pastedData) {
+                showToast('No data to paste', 'error');
+                return;
+            }
+            const maxRows = parseInt(document.querySelector('#maxDisputeRows').value) || 50;
+            const normalizedData = pastedData.replace(/\r\n|\r/g, '\n').trim();
+            const ids = [...new Set(
+                normalizedData
+                    .split(/[\n,\t\s;|]+/)
+                    .map(id => id.trim())
+                    .filter(id => id && id.length > 0 && validateDisputeId(id))
+             )].slice(0, maxRows);
+            if (ids.length === 0) {
+                showToast('No valid Dispute IDs found. Ensure IDs start with "DSPT" followed by numbers and are separated by commas, spaces, or newlines.', 'error');
+                return;
+            }
+            if (ids.length === 1 && normalizedData.length > 20 && !normalizedData.includes('\n') && !normalizedData.includes(',') && !normalizedData.includes('\t') && !normalizedData.includes(';') && !normalizedData.includes('|')) {
+                showToast('Only one Dispute ID detected. Use newlines, commas, tabs, spaces, semicolons, or pipes to separate multiple IDs.', 'error');
+                return;
+            }
+            document.querySelector('#disputeInputRows').innerHTML = '';
+            ids.forEach(id => {
+                addDisputeInputRow(id);
+            });
+            validateDisputeInputs();
+            showToast(`Pasted ${ids.length} unique row${ids.length !== 1 ? 's' : ''}`);
+        }
+
+        function generateDisputeLinks(e) {
+            e.preventDefault();
+            const storeName = document.querySelector('#storeName').value.trim();
+            const baseUrl = document.querySelector('#baseUrl').value.trim();
+            const disputeIdInputs = document.querySelectorAll('#disputeInputRows .disputeId');
+            const disputeIds = Array.from(disputeIdInputs).map(input => input.value.trim()).filter(id => id);
+            const maxRows = parseInt(document.querySelector('#maxDisputeRows').value) || 50;
+            if (!storeName) {
+                showToast('Please enter a store name', 'error');
+                return;
+            }
+            if (!validateUrl(baseUrl)) {
+                showToast('Please enter a valid base URL', 'error');
+                document.querySelector('#baseUrl').classList.add('is-invalid');
+                return;
+            }
+            if (disputeIds.length === 0) {
+                showToast('Please enter at least one dispute ID', 'error');
+                return;
+            }
+            if (disputeIds.length > maxRows) {
+                showToast(`Maximum ${maxRows} dispute IDs allowed`, 'error');
+                return;
+            }
+            const delayInput = document.querySelector('#disputeLinkDelay');
+            const delay = parseInt(delayInput.value);
+            if (isNaN(delay) || delay < 0 || delay > 5000) {
+                delayInput.classList.add('is-invalid');
+                showToast('Delay must be between 0 and 5000 ms', 'error');
+                return;
+            }
+
+            document.querySelector('#generateDisputeText').style.display = 'none';
+            document.querySelector('#generateDisputeSpinner').style.display = 'inline-block';
+            document.querySelector('#generateDisputeLinks').disabled = true;
+
+            let urlObj;
+            try {
+                urlObj = new URL(baseUrl);
+            } catch (err) {
+                showToast('Invalid base URL format', 'error');
+                document.querySelector('#baseUrl').classList.add('is-invalid');
+                document.querySelector('#generateDisputeText').style.display = 'inline';
+                document.querySelector('#generateDisputeSpinner').style.display = 'none';
+                document.querySelector('#generateDisputeLinks').disabled = false;
+                return;
+            }
+            urlObj.searchParams.delete('disputeId');
+            const newResults = disputeIds.map(id => {
+                const newUrl = new URL(urlObj);
+                newUrl.searchParams.set('disputeId', id);
+                const finalUrl = newUrl.toString();
+                return {
+                    id,
+                     url: finalUrl,
+                    selected: false
+                };
+            });
+            disputeResultsData = [...disputeResultsData, ...newResults];
+            updateDisputeResultsTable();
+            document.querySelector('#generateDisputeText').style.display = 'inline';
+            document.querySelector('#generateDisputeSpinner').style.display = 'none';
+            document.querySelector('#generateDisputeLinks').disabled = false;
+            showToast(`Generated ${newResults.length} dispute ID links`);
+        }
+
+        function updateDisputeResultsTable(searchQuery = '') {
+            const tbody = document.querySelector('#disputeResultsTable');
+            tbody.innerHTML = '';
+            if (disputeResultsData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4">No links generated yet</td></tr>';
+                return;
+            }
+            const lowerQuery = searchQuery.toLowerCase();
+            disputeResultsData.forEach((result, index) => {
+                if (searchQuery && !result.id.toLowerCase().includes(lowerQuery)) {
+                    return;
+                }
+                const row = `
+                    <tr data-index="${index}" class="${result.selected ? 'selected-row' : ''}">
+                        <td><input type="checkbox" class="row-checkbox select-checkbox" ${result.selected ? 'checked' : ''} aria-label="Select row"></td>
+                        <td>${escapeHtml(result.id)}</td>
+                        <td>
+                             <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary" onclick="openLink('${escapeHtml(result.url)}')" aria-label="Open Link">
+                                    <i class="fas fa-external-link-alt"></i> Open
+                                 </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('${safeEncodeUrl(result.url)}')" aria-label="Copy Link">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="removeDisputeLink(${index})" aria-label="Delete Link">
+                                     <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                     </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        function removeDisputeLink(index) {
+            const removedLink = disputeResultsData.splice(index, 1)[0];
+            updateDisputeResultsTable();
+            showToast('Link removed', 'success', {
+                undo: () => {
+                    disputeResultsData.splice(index, 0, removedLink);
+                    updateDisputeResultsTable();
+                }
+            });
+        }
+
+        function toggleDisputeSelectAll() {
+            const allSelected = disputeResultsData.every(result => result.selected);
+            disputeResultsData.forEach(result => result.selected = !allSelected);
+            updateDisputeResultsTable();
+        }
+
+        function openDisputeSelected() {
+            const selectedResults = disputeResultsData.filter(result => result.selected);
+            if (selectedResults.length === 0) {
+                showToast('No links selected', 'error');
+                return;
+            }
+            const delay = parseInt(document.querySelector('#disputeLinkDelay').value) || 500;
+            selectedResults.forEach((result, index) => {
+                setTimeout(() => {
+                    window.open(result.url, '_blank');
+                }, index * delay);
+            });
+            showToast(`Opening ${selectedResults.length} links with ${delay}ms delay`);
+        }
+
+        function copyDisputeSelected() {
+            const selectedResults = disputeResultsData.filter(result => result.selected);
+            if (selectedResults.length === 0) {
+                showToast('No links selected', 'error');
+                return;
+            }
+            const text = selectedResults.map(result => result.url).join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`${selectedResults.length} links copied to clipboard`);
+            }).catch(() => {
+                showToast('Failed to copy links', 'error');
+            });
+        }
+
+        function copyDisputeAll() {
+            if (disputeResultsData.length === 0) {
+                showToast('No links to copy', 'error');
+                return;
+            }
+            const text = disputeResultsData.map(result => 
+                `=HYPERLINK("${escapeForGoogleSheets(result.url)}", "${escapeForGoogleSheets(result.id || 'Dispute')}")`
+            ).join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`${disputeResultsData.length} links copied to clipboard`);
+            }).catch(() => {
+                showToast('Failed to copy links', 'error');
+            });
+        }
+
+        function exportDisputeExcel() {
+            if (disputeResultsData.length === 0) {
+                showToast('No data to export', 'error');
+                return;
+            }
+            document.querySelector('#exportDisputeText').style.display = 'none';
+            document.querySelector('#exportDisputeSpinner').style.display = 'inline-block';
+            document.querySelector('#exportDisputeExcel').disabled = false;
+            const data = disputeResultsData.map(result => ({
+                'Dispute ID': result.id,
+                'URL': result.url
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Dispute ID Links');
+            XLSX.writeFile(wb, `Dispute_ID_Links_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+            document.querySelector('#exportDisputeText').style.display = 'inline';
+            document.querySelector('#exportDisputeSpinner').style.display = 'none';
+            document.querySelector('#exportDisputeExcel').disabled = false;
+            showToast('Exported to Excel');
+        }
+
+        // Sorting Functions
+        function sortTable(tableId, column, type = 'string') {
+            const table = document.querySelector(`#${tableId}`);
+            const th = table.querySelector(`th[data-sort="${column}"]`);
+            const isAsc = !th.classList.contains('sort-asc');
+            table.querySelectorAll('th').forEach(header => {
+                header.classList.remove('sort-asc', 'sort-desc');
+            });
+            th.classList.add(isAsc ? 'sort-asc' : 'sort-desc');
+
+            const data = tableId === 'createResultsTable' ? createGeneratedLinks : disputeResultsData;
+            data.sort((a, b) => {
+                let valA = a[column];
+                let valB = b[column];
+                if (type === 'number') {
+                    valA = Number(valA);
+                     valB = Number(valB);
+                }
+                if (type === 'string') {
+                    valA = valA.toString().toLowerCase();
+                    valB = valB.toString().toLowerCase();
+                 }
+                if (isAsc) {
+                    return valA > valB ? 1 : -1;
+                } else {
+                    return valA < valB ? 1 : -1;
+                 }
+            });
+            if (tableId === 'createResultsTable') {
+                updateCreateResultsTable(document.querySelector('#searchCreateResults').value);
+            } else {
+                updateDisputeResultsTable(document.querySelector('#searchDisputeResults').value);
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize inputs
+            initializeCreateInput();
+            initializeDisputeInput();
+
+            // Populate country override dropdown
+            const countryOverride = document.querySelector('#countryOverride');
+             for (const [code, data] of Object.entries(countryData)) {
+                const option = document.createElement('option');
+                option.value = code;
+                option.textContent = `${data.flag} ${data.name}`;
+                countryOverride.appendChild(option);
+             }
+
+            // Store name and country detection for Dispute ID Links
+            document.querySelector('#storeName').addEventListener('input', () => {
+                const storeName = document.querySelector('#storeName').value;
+                const { code, confidence } = detectCountry(storeName);
+                updateCountryBadge(code, confidence);
+                validateDisputeInputs();
+            });
+
+            document.querySelector('#countryOverride').addEventListener('change', () => {
+                const code = document.querySelector('#countryOverride').value || detectCountry(document.querySelector('#storeName').value).code;
+                updateCountryBadge(code, 1.0);
+            });
+            document.querySelector('#openPortalBtn').addEventListener('click', () => {
+                const code = detectCountry(document.querySelector('#storeName').value).code || 'US';
+                if (code && countryData[code]) {
+                    window.open(countryData[code].url, '_blank');
+                }
+            });
+            // Create Dispute Links tab events
+            document.querySelector('#createInputTable').addEventListener('input', validateCreateInputs);
+            document.querySelector('#createInputTable').addEventListener('paste', handleCreatePaste);
+            document.querySelector('#generateCreateLinks').addEventListener('click', generateCreateLinks);
+            document.querySelector('#createLinkDelay').addEventListener('input', validateCreateInputs);
+            document.querySelector('#maxCreateRows').addEventListener('change', validateCreateInputs);
+
+            document.querySelector('#searchCreateResults').addEventListener('input', () => {
+                const query = document.querySelector('#searchCreateResults').value;
+                updateCreateResultsTable(query);
+            });
+            document.querySelector('#exportCreateExcel').addEventListener('click', exportCreateExcel);
+
+            document.querySelector('#createResultsTable').addEventListener('click', (e) => {
+                const target = e.target;
+                if (target.classList.contains('select-checkbox')) {
+                    const index = parseInt(target.closest('tr').dataset.index);
+                    createGeneratedLinks[index].selected = target.checked;
+                     updateCreateResultsTable(document.querySelector('#searchCreateResults').value);
+                    updateCreateStats();
+                } else if (target.closest('th[data-sort]')) {
+                    const column = target.closest('th').dataset.sort;
+                    const type = column === 'count' ? 'number' : 'string';
+                     sortTable('createResultsTable', column, type);
+                }
+            });
+            // Dispute ID Links tab events
+            document.querySelector('#disputeLinkForm').addEventListener('submit', generateDisputeLinks);
+            document.querySelector('#baseUrl').addEventListener('input', () => {
+                document.querySelector('#baseUrl').classList.remove('is-invalid');
+                validateDisputeInputs();
+            });
+            document.querySelector('#disputeInputTable').addEventListener('input', validateDisputeInputs);
+            document.querySelector('#disputeInputTable').addEventListener('paste', handleDisputePaste);
+            document.querySelector('#disputeLinkDelay').addEventListener('input', validateDisputeInputs);
+            document.querySelector('#maxDisputeRows').addEventListener('change', validateDisputeInputs);
+
+            document.querySelector('#searchDisputeResults').addEventListener('input', () => {
+                const query = document.querySelector('#searchDisputeResults').value;
+                updateDisputeResultsTable(query);
+            });
+            document.querySelector('#exportDisputeExcel').addEventListener('click', exportDisputeExcel);
+
+            document.querySelector('#disputeResultsTable').addEventListener('click', (e) => {
+                const target = e.target;
+                if (target.classList.contains('select-checkbox')) {
+                    const index = parseInt(target.closest('tr').dataset.index);
+                    disputeResultsData[index].selected = target.checked;
+                     updateDisputeResultsTable(document.querySelector('#searchDisputeResults').value);
+                } else if (target.closest('th[data-sort]')) {
+                    const column = target.closest('th').dataset.sort;
+                    sortTable('disputeResultsTable', column, 'string');
+                }
+             });
+
+            // Initialize country badge
+            updateCountryBadge(null, 0);
+        });
+    
+// Premium Theme Switcher: compact dropdown, accessibility, and persistence
+(function () {
+    const ICONS = {
+        'default': 'fas fa-palette',
+        'dark': 'fas fa-moon',
+        'matrix': 'fas fa-terminal'
+    };
+    function applyTheme(theme) {
+        if (!theme || theme === 'default') {
+            document.documentElement.removeAttribute('data-theme');
+        } else {
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        // update active item states in dropdown
+        var items = document.querySelectorAll('.theme-item');
+        items.forEach(function(it){
+            it.classList.toggle('active', it.getAttribute('data-theme') === theme);
+            it.setAttribute('aria-pressed', it.getAttribute('data-theme') === theme ? 'true' : 'false');
+        });
+        // Update the dropdown icon to match current theme
+        var iconEl = document.getElementById('currentThemeIcon');
+        if (iconEl) {
+            var cls = ICONS[theme] || ICONS['default'];
+            iconEl.className = cls;
+        }
+        try { localStorage.setItem('theme', theme || 'default'); } catch(e){}
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var saved = 'default';
+        try { saved = localStorage.getItem('theme') || 'default'; } catch(e){ saved = 'default'; }
+        // wire up dropdown items
+        var items = document.querySelectorAll('.theme-item');
+        items.forEach(function(item){
+            item.addEventListener('click', function(e){
+                var theme = item.getAttribute('data-theme');
+                applyTheme(theme);
+            });
+            item.addEventListener('keydown', function(e){
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
+            });
+        });
+        // set current icon on load
+        var iconEl = document.getElementById('currentThemeIcon');
+        if (iconEl) {
+            var ic = ICONS[saved] || ICONS['default'];
+            iconEl.className = ic;
+        }
+        // apply saved theme to document
+        applyTheme(saved);
+    });
+})();
+
+</script>
+</body>
+</html>

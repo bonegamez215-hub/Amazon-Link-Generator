@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Amazon Link Generator</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="default">
+  <header>
+    <h1>Amazon Link Generator</h1>
+    <div class="theme-switcher">
+      <label for="themeSelect">Theme:</label>
+      <select id="themeSelect">
+        <option value="default">Default</option>
+        <option value="dark">Dark</option>
+        <option value="matrix">Matrix</option>
+      </select>
+    </div>
+  </header>
+
+  <main>
+    <section class="generator">
+      <textarea id="inputArea" placeholder="Enter Agreement ID, Invoice Numbers, etc."></textarea>
+      <div class="buttons">
+        <button id="generateBtn" class="btn-primary">Generate Links</button>
+        <button id="clearBtn" class="btn-secondary">Clear</button>
+        <button id="exportXLSXBtn" class="btn-secondary">Export XLSX</button>
+        <button id="exportCSVBtn" class="btn-secondary">Export CSV</button>
+      </div>
+      <div id="statusBar" class="status-bar">No data generated yet.</div>
+    </section>
+
+    <section class="results">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th>Agreement ID</th>
+            <th>Invoice Number</th>
+            <th>Dispute Link</th>
+            <th>Processed Date</th>
+            <th>Country</th>
+            <th>Country Code</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    <p>© Bonez 2025</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
